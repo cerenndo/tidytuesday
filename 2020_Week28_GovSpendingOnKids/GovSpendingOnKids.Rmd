@@ -1,0 +1,113 @@
+---
+title: "govkids"
+author: "Ceren Dolma"
+date: "9/15/2020"
+output: html_document
+---
+
+
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(tidytuesdayR)
+
+library(cartogram)
+library(maptools)
+library(sp)
+library(maps)
+library(tmap)
+library(RColorBrewer)
+library(rgdal)
+library(rgeos)
+library(broom)
+library(mapproj)
+
+```
+
+
+
+
+```{r}
+tuesdata <- tidytuesdayR::tt_load(2020, week = 38)
+kids <- tuesdata$kids
+
+```
+
+```{r}
+
+yearly_sums_total<- kids %>%
+  filter(year=="2013" & variable =="highered" & state != "Hawaii" & state != "Alaska" ) %>%
+  group_by(state) %>%
+  summarise(totalspent=sum(inf_adj_perchild))
+
+yearly_sums_total$state <- tolower(yearly_sums_total$state)
+```
+
+```{r}
+usa <- map("state", fill = TRUE)
+IDs <- sapply(strsplit(usa$names, ":"), function(x) x[1])
+usa <- map2SpatialPolygons(usa, IDs=IDs, proj4string=CRS("+proj=aea +lon_0=-104.765625 +lat_1=31.2886066 +lat_2=63.4776485 +lat_0=47.3831276 +datum=WGS84 +units=m +no_defs"))
+usa <- SpatialPolygonsDataFrame(usa, 
+                                data = data.frame(unique(IDs), 
+                                                  row.names = unique(IDs)) )
+```
+
+
+```{r}
+#usa@data = data.frame(usa@data,yearly_sums_total[match(usa@data[,'unique.IDs.'], yearly_sums_total[,'state' ]),])
+
+usa2 <- merge(usa, yearly_sums_total, by.x = "unique.IDs.", by.y = "state")
+
+ctgm <- cartogram_cont(usa2, "totalspent")
+
+plot(ctgm)
+
+tm_shape(ctgm) + 
+  tm_fill("totalspent", style="jenks") +
+  tm_borders() + 
+  tm_layout(frame=F)
+
+```
+```{r}
+carto_fortified <- tidy(ctgm, region = "unique.IDs.")
+carto_fortified <- carto_fortified %>% 
+  left_join(. , ctgm@data, by=c("id"="unique.IDs.")) 
+
+centers <- cbind.data.frame(data.frame(gCentroid(ctgm, byid=TRUE), id=ctgm@data$unique.IDs.))
+```
+
+```{r}
+firstdraft<-ggplot() +
+  geom_polygon(data = carto_fortified, aes(fill = totalspent, x = long, y = lat, group = group) , size=0.3, alpha=0.9, color="white") +
+  scale_fill_gradientn(
+    colours=brewer.pal(7, "Purples"), name="Amount spent in $1000s", 
+    guide=guide_legend( keyheight = unit(2, units = "mm"), 
+                        keywidth=unit(12, units = "mm"), 
+                        title.position = 'top', 
+                        label.position = "bottom") 
+  ) +
+#    geom_text(data=centers, aes(x=x, y=y, label=id), color="white", size=3, alpha=0.6) +
+  theme_void() +
+  ggtitle( "Higher Education Spending Per Child (2016)" ) +
+  
+  theme(
+    legend.position = c(0.2, 0.1),
+    legend.direction = "horizontal",
+    text = element_text(color = "#22211d"),
+    plot.title = element_text(size= 15, hjust=0.1, color = "black", margin = margin(b = 0, t = 0.7, l = 2, unit = "cm")),
+  ) +
+  coord_map()
+
+firstdraft
+```
+
+
+```{r}
+ggsave(filename="GovSpendingOnKids.png", plot=firstdraft, device="png",
+       height=13, width=18, units="cm", dpi=300)
+```
+
+
+

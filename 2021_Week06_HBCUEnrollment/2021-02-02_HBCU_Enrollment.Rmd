@@ -1,0 +1,94 @@
+---
+title: "tidy"
+author: "Ceren Dolma"
+date: "2/3/2021"
+output: html_document
+---
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidytuesdayR)
+library(tidyr)
+library(gganimate)
+
+```
+
+
+```{r}
+tuesdata <- tidytuesdayR::tt_load(2021, week = 6)
+hbcu_all <- tuesdata$hbcu_all
+head(hbcu_all)
+
+```
+
+```{r}
+  ggplot(hbcu_all) +
+  geom_line(aes(x=Year, y=Females), color="orange") +
+  geom_line(aes(x=Year, y=Males), color="green")
+```
+
+```{r}
+
+d <- data.frame(year=hbcu_all$Year, male=hbcu_all$Males, female=hbcu_all$Females, total=hbcu_all$`Total enrollment`)
+
+d2 <- gather(d, key=sex, value=enrollment, male:female)
+
+```
+
+```{r}
+font <- "Helvetica"
+textcolor <- "#C1D7D6"
+
+newtheme <-theme(plot.margin = margin(1, 1, 0, 1, "cm"),
+                 panel.grid.minor = element_blank(),    
+                 axis.ticks = element_blank(),
+                 legend.title = element_blank(),
+                 panel.grid.major = element_line(color = "#0F2E2D"),
+                 
+                 plot.title = element_text(family = font,size = 16, face = 'bold', color= textcolor, v=3),  
+                 axis.title = element_text(family = font, size = 10, face = 'bold', color= textcolor),
+                 axis.text = element_text(family = font,  size = 8, face = "italic", color= textcolor),
+                 legend.text = element_text(family = font,size = 8, face = 'bold', colour = textcolor),
+
+                 plot.background = element_rect(fill="#091C1B", colour=NA), 
+                 panel.background  = element_rect(fill=NA),
+                 legend.background = element_rect(fill="transparent", colour=NA),
+                 legend.key        = element_rect(fill="transparent", colour=NA),
+                 legend.position = "bottom"
+                 )
+
+
+my_colors <- c("#00c4aa", "#00c4aa")
+my_scale <- scale_fill_manual(name = "sex", values = my_colors)    
+            
+        
+plott <- d2 %>%
+  ggplot( aes(x=year, y = enrollment, group=sex, color=sex)) + geom_line() + geom_point() +
+  scale_y_continuous(labels = scales::comma) + 
+  scale_colour_manual(values = c("female" = "#E48245", "male" = "#6AAA67")) +
+  labs(title= "HBCUs enrollment by sex, 1976-2015",
+       y = "ENROLLMENT",
+       x= "YEAR")  +  newtheme
+
+plott 
+
+
+ggsave("hbcuEnroll_static.png",
+       plott, 
+       width = 6.5,
+       height = 4.5, 
+       units = "in")
+
+
+#run the code below for the animated result
+# my.animation<- plott + transition_reveal(year)
+# 
+# animate(my.animation, width = 5.5,
+#        height = 4.25, 
+#        units = "in", res=300)
+# 
+# anim_save("hbcu_enroll.gif")
+
+```
+

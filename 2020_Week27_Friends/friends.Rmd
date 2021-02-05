@@ -1,0 +1,129 @@
+---
+title: "friends2"
+author: "Ceren Dolma"
+date: "9/10/2020"
+output: html_document
+---
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(extrafont)
+library(gridExtra)
+
+```
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+friends <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-09-08/friends.csv')
+friends_emotions <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-09-08/friends_emotions.csv')
+friends_info <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-09-08/friends_info.csv')
+
+```
+
+
+
+```{r}
+#Define gppr_theme() function
+
+theme_gppr <- function(){ 
+    font <- "Impact"   #assign font family up front
+    otherfont <- "Helvetica"
+    
+    theme_minimal() %+replace%    #replace elements we want to change
+    
+    theme(
+      
+      #grid elements
+      panel.grid.major = element_blank(),    #strip major gridlines
+      panel.grid.minor = element_blank(),    #strip minor gridlines
+      axis.ticks = element_blank(),          #strip axis ticks
+      
+      #since theme_minimal() already strips axis lines, 
+      #we don't need to do that again
+      
+      #text elements
+      plot.title = element_text(             #title
+                   family = font,            #set font family
+                   size = 15,                #set font size
+                   hjust = 0,                #left align
+                   vjust = 2),               #raise slightly
+      
+      plot.subtitle = element_text(          #subtitle
+                   family = font,            #font family
+                   size = 14),               #font size
+      
+      plot.caption = element_text(           #caption
+                   family = font,            #font family
+                   size = 9,                 #font size
+                   hjust = 1),               #right align
+      
+      axis.title = element_text(             #axis titles
+                   family = font,            #font family
+                   size = 10),               #font size
+      
+      axis.text = element_text(              #axis text
+                   family = otherfont,            #axis famuly
+                   size = 9),                #font size
+      
+      axis.text.x = element_text( 
+                    angle = 90, 
+                    vjust=0.5, 
+                    hjust=1)
+    )
+}
+
+```
+
+```{r}
+friends<- na.omit(friends) 
+
+excluding <- c('Ross Geller', 'Monica Geller','Rachel Green','Chandler Bing', 'Phoebe Buffay', 'Joey Tribbiani')
+
+`%notin%` <- Negate(`%in%`)
+
+generics <- c('#ALL#', 'Woman', 'Scene Directions')
+
+tallied_spkrs <- friends %>%
+  group_by(speaker) %>%
+  count(speaker) %>%
+  filter(n>100) %>%
+  filter(speaker %notin% generics) %>%
+  arrange(desc(n)) 
+
+bigsix <- tallied_spkrs[tallied_spkrs$speaker %in% excluding, ]
+
+a<- tallied_spkrs %>%
+  ggplot() +
+  geom_col(aes(x=reorder(speaker, -n), y=n), fill="darkgreen") +
+  geom_col(data=bigsix, mapping=aes(x=reorder(speaker, -n), y=n), fill="grey", alpha=0.8) +
+  ggtitle("Number of Lines by Character") + xlab("") + ylab("") +
+  theme_gppr()    
+```
+
+```{r}
+tallied_scndry <- tallied_spkrs %>%
+  filter(speaker %notin% excluding) %>%
+  arrange(desc(n))
+
+b<- tallied_scndry %>%
+  ggplot() +
+  geom_col(aes(x=reorder(speaker, -n), y=n),fill="darkgreen") +
+  labs(title = "A Closer Look: Secondary Characters", 
+    x="", 
+    y="") +
+  theme_gppr()    
+
+```
+
+```{r}
+gridded <- grid.arrange(a, b, ncol=2)
+
+ggsave(filename="friends_utterances.png", plot=gridded, device="png",
+       height=12, width=25, units="cm", dpi=300)
+
+
+```
+
