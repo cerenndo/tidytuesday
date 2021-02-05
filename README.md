@@ -1,6 +1,9 @@
 # tidytuesday
 repository for TidyTuesday .rmd files and outputs
+<br>
 below is a gallery of visualizations so far
+<br>
+feedback and suggestions welcome!
 
 |Date | Topic | Final Product | 
 | ------ | ------ | ------ |
